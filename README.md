@@ -1,5 +1,7 @@
 # Bad Piggies Plugin
 
+[![Project Status: Abandoned](./assets/images/badges/status.svg)](./) [![Repository Size](https://img.shields.io/github/repo-size/esotericenderman/bad-piggies-plugin?style=for-the-badge&logo=github&label=Repository%20size)](./)
+
 > A plugin that implements some of the features from Rovio's "Bad Piggies" mobile game.
 
 ## License
