@@ -1,81 +1,58 @@
-package dev.enderman.minecraft.plugins.badpiggies.managers;
+package dev.enderman.minecraft.plugins.badpiggies.managers
 
-import dev.enderman.minecraft.plugins.badpiggies.BadPiggiesPlugin;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
-import org.jetbrains.annotations.NotNull;
+import dev.enderman.minecraft.plugins.badpiggies.BadPiggiesPlugin
+import org.bukkit.entity.Entity
+import org.bukkit.entity.Player
+import org.bukkit.scheduler.BukkitRunnable
+import org.bukkit.util.Vector
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+class PlayerVelocityManager(private val plugin: BadPiggiesPlugin) : BukkitRunnable() {
+    private val playerVelocityMap: MutableMap<Player, Vector> = HashMap()
 
-public class PlayerVelocityManager extends BukkitRunnable {
+    private val playerPositionMap: MutableMap<Player, Vector> = HashMap()
 
-    private final BadPiggiesPlugin plugin;
-
-    private final Map<Player, Vector> playerVelocityMap = new HashMap<>();
-
-    private final Map<Player, Vector> playerPositionMap = new HashMap<>();
-
-    public PlayerVelocityManager(BadPiggiesPlugin plugin) {
-        this.plugin = plugin;
+    fun getPlayerVelocity(player: Player): Vector? {
+        return playerVelocityMap[player]
     }
 
-    public Vector getPlayerVelocity(Player player) {
-        return playerVelocityMap.get(player);
-    }
+    fun getVelocity(entity: Entity): Vector {
+        if (entity is Player) {
+            val velocity = getPlayerVelocity(entity)!! ?: return Vector()
 
-    public Vector getVelocity(Entity entity) {
-        if (entity instanceof Player player) {
-            Vector velocity = getPlayerVelocity(player);
-
-            if (velocity == null) {
-                return new Vector();
-            }
-
-            return velocity;
+            return velocity
         }
 
-        return entity.getVelocity();
+        return entity.velocity
     }
 
-    public void updatePlayerVelocityData(@NotNull Player player) {
-        Vector oldPosition = playerPositionMap.get(player);
-        Vector newPosition = player.getLocation().toVector();
+    fun updatePlayerVelocityData(player: Player) {
+        var oldPosition = playerPositionMap[player]
+        val newPosition = player.location.toVector()
 
         if (oldPosition == null) {
-            oldPosition = newPosition;
+            oldPosition = newPosition
         }
 
-        Vector velocity = newPosition.clone().subtract(oldPosition);
+        val velocity = newPosition.clone().subtract(oldPosition)
 
-        playerVelocityMap.put(
-                player,
-                velocity
-        );
+        playerVelocityMap[player] = velocity
 
-        playerPositionMap.put(
-                player,
-                newPosition
-        );
+        playerPositionMap[player] = newPosition
     }
 
-    public void updateVelocityData() {
-        List<? extends Player> players = plugin.getServer().getOnlinePlayers().stream().toList();
+    fun updateVelocityData() {
+        val players = plugin.server.onlinePlayers.stream().toList()
 
-        for (Player player : players) {
-            int ticksLived = plugin.getPlayerTickManager().getPlayerTicksExisted(player);
+        for (player in players) {
+            val ticksLived = plugin.playerTickManager!!.getPlayerTicksExisted(player)
 
             if (ticksLived > 1) {
-                updatePlayerVelocityData(player);
+                updatePlayerVelocityData(player)
             }
         }
     }
 
-    @Override
-    public void run() {
-        updateVelocityData();
+    override fun run() {
+        updateVelocityData()
     }
 }

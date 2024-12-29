@@ -1,28 +1,19 @@
-package dev.enderman.minecraft.plugins.badpiggies.event.listeners;
+package dev.enderman.minecraft.plugins.badpiggies.event.listeners
 
-import dev.enderman.minecraft.plugins.badpiggies.BadPiggiesPlugin;
-import dev.enderman.minecraft.plugins.badpiggies.managers.InstantTntManager;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.jetbrains.annotations.NotNull;
+import dev.enderman.minecraft.plugins.badpiggies.BadPiggiesPlugin
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.block.BlockPlaceEvent
 
-public class InstantTntPlaceListener implements Listener {
-
-    private final BadPiggiesPlugin plugin;
-
-    public InstantTntPlaceListener(BadPiggiesPlugin plugin) {
-        this.plugin = plugin;
-    }
-
+class InstantTntPlaceListener(private val plugin: BadPiggiesPlugin) : Listener {
     @EventHandler
-    public void onTntPlace(@NotNull BlockPlaceEvent event) {
-        if (!plugin.getInstantTntManager().isInstantTnt(event.getItemInHand())) {
-            return;
+    fun onTntPlace(event: BlockPlaceEvent) {
+        if (!plugin.instantTntManager!!.isInstantTnt(event.itemInHand)) {
+            return
         }
 
-        InstantTntManager instantTntManager = plugin.getInstantTntManager();
+        val instantTntManager = plugin.instantTntManager
 
-        instantTntManager.addInstantTnt(event.getBlock());
+        instantTntManager!!.addInstantTnt(event.block)
     }
 }

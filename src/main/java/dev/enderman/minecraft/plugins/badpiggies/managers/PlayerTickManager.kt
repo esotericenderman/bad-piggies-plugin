@@ -1,44 +1,38 @@
-package dev.enderman.minecraft.plugins.badpiggies.managers;
+package dev.enderman.minecraft.plugins.badpiggies.managers
 
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.jetbrains.annotations.NotNull;
+import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.player.PlayerJoinEvent
+import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.scheduler.BukkitRunnable
 
-import java.util.HashMap;
-import java.util.Map;
+class PlayerTickManager : BukkitRunnable(), Listener {
+    private val playerTicksExistedMap: MutableMap<Player, Int> = HashMap()
 
-public class PlayerTickManager extends BukkitRunnable implements Listener {
-
-    private final Map<Player, Integer> playerTicksExistedMap = new HashMap<>();
-
-    public int getPlayerTicksExisted(Player player) {
-        return playerTicksExistedMap.get(player);
+    fun getPlayerTicksExisted(player: Player): Int {
+        return playerTicksExistedMap[player]!!
     }
 
-    private void setPlayerTicksExisted(Player player, int ticksExisted) {
-        playerTicksExistedMap.put(player, ticksExisted);
+    private fun setPlayerTicksExisted(player: Player, ticksExisted: Int) {
+        playerTicksExistedMap[player] = ticksExisted
     }
 
     @EventHandler
-    public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
-        playerTicksExistedMap.put(event.getPlayer(), 0);
+    fun onPlayerJoin(event: PlayerJoinEvent) {
+        playerTicksExistedMap[event.player] = 0
     }
 
     @EventHandler
-    public void onPlayerLeave(@NotNull PlayerQuitEvent event) {
-        playerTicksExistedMap.remove(event.getPlayer());
+    fun onPlayerLeave(event: PlayerQuitEvent) {
+        playerTicksExistedMap.remove(event.player)
     }
 
-    @Override
-    public void run() {
-        for (Player player : playerTicksExistedMap.keySet()) {
-            int ticksLived = getPlayerTicksExisted(player);
+    override fun run() {
+        for (player in playerTicksExistedMap.keys) {
+            val ticksLived = getPlayerTicksExisted(player)
 
-            setPlayerTicksExisted(player, ticksLived + 1);
+            setPlayerTicksExisted(player, ticksLived + 1)
         }
     }
 }

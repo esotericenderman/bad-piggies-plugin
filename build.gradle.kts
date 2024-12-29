@@ -5,6 +5,7 @@ plugins {
   id("io.papermc.paperweight.userdev") version "1.7.1"
   id("xyz.jpenilla.run-paper") version "2.3.0"
   id("xyz.jpenilla.resource-factory-bukkit-convention") version "1.1.1"
+  kotlin("jvm")
 }
 
 group = "dev.enderman"
@@ -20,6 +21,7 @@ java {
 
 dependencies {
     paperweight.paperDevBundle("$paperApiVersion-R0.1-SNAPSHOT")
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks {
@@ -32,6 +34,24 @@ tasks {
     }
 }
 
+tasks.withType<Jar> {
+    // Otherwise you'll get a "No main manifest attribute" error
+    manifest {
+        attributes["Main-Class"] = "com.example.MainKt"
+    }
+
+    // To avoid the duplicate handling strategy error
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // To add all of the dependencies
+    from(sourceSets.main.get().output)
+
+    dependsOn(configurations.runtimeClasspath)
+    from({
+        configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
+    })
+}
+
 bukkitPluginYaml {
     name = "BadPiggies"
     version = project.version.toString()
@@ -39,4 +59,7 @@ bukkitPluginYaml {
     load = BukkitPluginYaml.PluginLoadOrder.STARTUP
     authors.add("Esoteric Enderman")
     apiVersion = paperApiVersion
+}
+repositories {
+    mavenCentral()
 }

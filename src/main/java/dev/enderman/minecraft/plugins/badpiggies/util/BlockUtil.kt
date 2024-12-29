@@ -1,21 +1,21 @@
-package dev.enderman.minecraft.plugins.badpiggies.util;
+package dev.enderman.minecraft.plugins.badpiggies.util
 
-import org.bukkit.Location;
-import org.bukkit.block.Block;
-import org.bukkit.util.Vector;
-import org.jetbrains.annotations.NotNull;
+import org.bukkit.Location
+import org.bukkit.block.Block
+import org.bukkit.util.Vector
 
-public class BlockUtil {
-
-    public static @NotNull Location getBlockCenterLocation(@NotNull Location location) {
-        return location.clone().add(0.5D, 0.5D, 0.5D);
+object BlockUtil {
+    fun getBlockCenterLocation(location: Location): Location {
+        return location.clone().add(0.5, 0.5, 0.5)
     }
 
-    public static @NotNull Location getBlockCenterLocation(@NotNull Block block) {
-        return getBlockCenterLocation(block.getLocation());
+    @JvmStatic
+    fun getBlockCenterLocation(block: Block): Location {
+        return getBlockCenterLocation(block.location)
     }
 
-    public static @NotNull Vector getBlockCenterLocation(@NotNull Vector vector) {
-        return vector.clone().add(new Vector(0.5D, 0.5D, 0.5D));
+    @JvmStatic
+    fun getBlockCenterLocation(vector: Vector): Vector {
+        return vector.clone().add(Vector(0.5, 0.5, 0.5))
     }
 }

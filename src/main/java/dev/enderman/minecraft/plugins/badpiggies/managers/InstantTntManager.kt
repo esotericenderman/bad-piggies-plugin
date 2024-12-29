@@ -1,273 +1,289 @@
-package dev.enderman.minecraft.plugins.badpiggies.managers;
+package dev.enderman.minecraft.plugins.badpiggies.managers
 
-import com.google.gson.Gson;
-import com.google.gson.internal.LinkedTreeMap;
-import net.minecraft.world.level.*;
-import dev.enderman.minecraft.plugins.badpiggies.BadPiggiesPlugin;
-import dev.enderman.minecraft.plugins.badpiggies.util.BlockUtil;
-import org.bukkit.*;
-import org.bukkit.block.Block;
-import org.bukkit.entity.Entity;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.util.BoundingBox;
-import org.bukkit.util.Vector;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import com.google.gson.Gson
+import com.google.gson.internal.LinkedTreeMap
+import dev.enderman.minecraft.plugins.badpiggies.BadPiggiesPlugin
+import dev.enderman.minecraft.plugins.badpiggies.util.BlockUtil.getBlockCenterLocation
+import net.minecraft.world.level.Explosion
+import org.bukkit.Bukkit
+import org.bukkit.Location
+import org.bukkit.Material
+import org.bukkit.block.Block
+import org.bukkit.entity.Entity
+import org.bukkit.inventory.ItemStack
+import org.bukkit.persistence.PersistentDataType
+import org.bukkit.util.Vector
+import java.io.*
+import kotlin.math.floor
+import kotlin.math.pow
 
-import java.io.*;
-import java.util.*;
+class InstantTntManager(private val plugin: BadPiggiesPlugin) {
+    var explosionClass: Class<out Explosion?> = Explosion::class.java
 
-public class InstantTntManager {
+    private val instantTntDataFile = File(plugin.dataFolder, "data/instant-tnt-blocks.json")
 
-    Class<? extends Explosion> explosionClass = Explosion.class;
+    private val instantTntBlocks: MutableList<Vector> = ArrayList()
 
-    private final BadPiggiesPlugin plugin;
-
-    private final File instantTntDataFile;
-
-    private final List<Vector> instantTntBlocks = new ArrayList<>();
-
-    public InstantTntManager(@NotNull BadPiggiesPlugin plugin) {
-        this.plugin = plugin;
-        instantTntDataFile = new File(plugin.getDataFolder(), "data/instant-tnt-blocks.json");
-
-        loadInstantTntData();
+    init {
+        loadInstantTntData()
     }
 
-    public void addInstantTnt(Vector blockCoordinates) {
-        instantTntBlocks.add(blockCoordinates);
+    fun addInstantTnt(blockCoordinates: Vector) {
+        instantTntBlocks.add(blockCoordinates)
     }
 
-    public void addInstantTnt(@NotNull Block block) {
-        addInstantTnt(block.getLocation().toVector());
+    fun addInstantTnt(block: Block) {
+        addInstantTnt(block.location.toVector())
     }
 
-    public void removeInstantTnt(Vector blockCoordinates) {
-        instantTntBlocks.remove(blockCoordinates);
+    fun removeInstantTnt(blockCoordinates: Vector) {
+        instantTntBlocks.remove(blockCoordinates)
     }
 
-    public void removeInstantTnt(@NotNull Block block) {
-        removeInstantTnt(block.getLocation().toVector());
+    fun removeInstantTnt(block: Block) {
+        removeInstantTnt(block.location.toVector())
     }
 
-    public boolean isInstantTnt(Vector blockCoordinates) {
-        return instantTntBlocks.contains(blockCoordinates);
+    fun isInstantTnt(blockCoordinates: Vector): Boolean {
+        return instantTntBlocks.contains(blockCoordinates)
     }
 
-    public boolean isInstantTnt(@NotNull Block block) {
-        return isInstantTnt(block.getLocation().toVector());
+    fun isInstantTnt(block: Block): Boolean {
+        return isInstantTnt(block.location.toVector())
     }
 
-    public boolean isInstantTnt(@NotNull ItemStack itemStack) {
-        ItemMeta meta = itemStack.getItemMeta();
+    fun isInstantTnt(itemStack: ItemStack): Boolean {
+        val meta = itemStack.itemMeta
 
-        PersistentDataContainer dataContainer = meta.getPersistentDataContainer();
+        val dataContainer = meta.persistentDataContainer
 
-        return Boolean.TRUE.equals(dataContainer.get(plugin.getInstantTntKey(), PersistentDataType.BOOLEAN));
+        return java.lang.Boolean.TRUE == dataContainer.get(plugin.instantTntKey!!, PersistentDataType.BOOLEAN)
     }
 
-    public ItemStack getInstantTntItem() {
-        ItemStack instantTnt = new ItemStack(Material.TNT);
+    val instantTntItem: ItemStack
+        get() {
+            val instantTnt = ItemStack(Material.TNT)
 
-        ItemMeta meta = instantTnt.getItemMeta();
+            val meta = instantTnt.itemMeta
 
-        PersistentDataContainer dataContainer = meta.getPersistentDataContainer();
-        NamespacedKey instantTntKey = plugin.getInstantTntKey();
-        dataContainer.set(instantTntKey, PersistentDataType.BOOLEAN, true);
+            val dataContainer = meta.persistentDataContainer
+            val instantTntKey = plugin.instantTntKey
+            dataContainer.set(instantTntKey!!, PersistentDataType.BOOLEAN, true)
 
-        instantTnt.setItemMeta(meta);
+            instantTnt.setItemMeta(meta)
 
-        return instantTnt;
-    }
+            return instantTnt
+        }
 
-    public boolean shouldInstantTntDetonate(Block instantTnt, @NotNull Entity cause, @NotNull Location locationOverride) {
-        Location blockCenterLocation = BlockUtil.getBlockCenterLocation(instantTnt);
+    @JvmOverloads
+    fun shouldInstantTntDetonate(
+        instantTnt: Block,
+        cause: Entity,
+        locationOverride: Location = cause.location
+    ): Boolean {
+        val blockCenterLocation = getBlockCenterLocation(instantTnt)
 
-        double tntX = blockCenterLocation.getX();
-        double tntY = blockCenterLocation.getY();
-        double tntZ = blockCenterLocation.getZ();
+        val tntX = blockCenterLocation.x
+        val tntY = blockCenterLocation.y
+        val tntZ = blockCenterLocation.z
 
-        double minTntY = tntY - 0.5D;
-        double maxTntY = tntY + 0.5D;
+        val minTntY = tntY - 0.5
+        val maxTntY = tntY + 0.5
 
-        double minTntX = tntX - 0.5D;
-        double maxTntX = tntX + 0.5D;
+        val minTntX = tntX - 0.5
+        val maxTntX = tntX + 0.5
 
-        double minTntZ = tntZ - 0.5D;
-        double maxTntZ = tntZ + 0.5D;
+        val minTntZ = tntZ - 0.5
+        val maxTntZ = tntZ + 0.5
 
-        Vector entityVelocity = plugin.getPlayerVelocityManager().getVelocity(cause);
+        val entityVelocity = plugin.playerVelocityManager!!.getVelocity(cause)
 
-        double velocityX = entityVelocity.getX();
-        double velocityY = entityVelocity.getY();
-        double velocityZ = entityVelocity.getZ();
+        val velocityX = entityVelocity.x
+        val velocityY = entityVelocity.y
+        val velocityZ = entityVelocity.z
 
-        double significantValue = 0.0D;
+        var significantValue = 0.0
 
-        Vector locationDifference = locationOverride.clone().subtract(cause.getLocation()).toVector();
+        val locationDifference = locationOverride.clone().subtract(cause.location).toVector()
 
-        BoundingBox boundingBox = cause.getBoundingBox();
+        val boundingBox = cause.boundingBox
 
-        double minEntityY = boundingBox.getMinY() + locationDifference.getY();
-        double maxEntityY = boundingBox.getMaxY() + locationDifference.getY();
+        val minEntityY = boundingBox.minY + locationDifference.y
+        val maxEntityY = boundingBox.maxY + locationDifference.y
 
-        double maxEntityX = boundingBox.getMaxX() + locationDifference.getX();
-        double minEntityX = boundingBox.getMinX() + locationDifference.getX();
+        val maxEntityX = boundingBox.maxX + locationDifference.x
+        val minEntityX = boundingBox.minX + locationDifference.x
 
-        double maxEntityZ = boundingBox.getMaxZ() + locationDifference.getZ();
-        double minEntityZ = boundingBox.getMinZ() + locationDifference.getZ();
+        val maxEntityZ = boundingBox.maxZ + locationDifference.z
+        val minEntityZ = boundingBox.minZ + locationDifference.z
 
         if (maxEntityY <= minTntY) {
-            significantValue = velocityY;
+            significantValue = velocityY
         } else if (minEntityY >= maxTntY) {
-            significantValue = -velocityY;
+            significantValue = -velocityY
         } else if (maxEntityX <= minTntX) {
-            significantValue = velocityX;
+            significantValue = velocityX
         } else if (minEntityX >= maxTntX) {
-            significantValue = -velocityX;
+            significantValue = -velocityX
         } else if (maxEntityZ <= minTntZ) {
-            significantValue = velocityZ;
+            significantValue = velocityZ
         } else if (minEntityZ >= maxTntZ) {
-            significantValue = -velocityZ;
+            significantValue = -velocityZ
         }
 
-        return significantValue > plugin.getConfig().getDouble("features.instant-tnt.minimum-collision-detonation-speed") / 20.0D;
+        return significantValue > plugin.config.getDouble("features.instant-tnt.minimum-collision-detonation-speed") / 20.0
     }
 
-    public boolean shouldInstantTntDetonate(Block instantTnt, @NotNull Entity cause) {
-        return shouldInstantTntDetonate(instantTnt, cause, cause.getLocation());
+    private fun detonateInstantTnt(instantTnt: Block, cause: Entity?) {
+        instantTnt.type = Material.AIR
+
+        val power = plugin.config.getDouble("features.instant-tnt.explosion.power").toFloat()
+        val shouldSetFire = plugin.config.getBoolean("features.instant-tnt.explosion.sets-fire")
+        val shouldBreakBlocks = plugin.config.getBoolean("features.instant-tnt.explosion.breaks-blocks")
+
+        instantTnt.world.createExplosion(
+            cause,
+            getBlockCenterLocation(instantTnt),
+            power,
+            shouldSetFire,
+            shouldBreakBlocks,
+            false
+        )
+
+        removeInstantTnt(instantTnt)
     }
 
-    private void detonateInstantTnt(@NotNull Block instantTnt, @Nullable Entity cause) {
-        instantTnt.setType(Material.AIR);
+    private fun chainDetonateInstantTnt(startingTnt: Block, blocksToDetonate: MutableList<Vector>): List<Vector> {
+        val blocksToIterateThrough: MutableList<Vector>
 
-        float power = (float) plugin.getConfig().getDouble("features.instant-tnt.explosion.power");
-        boolean shouldSetFire = plugin.getConfig().getBoolean("features.instant-tnt.explosion.sets-fire");
-        boolean shouldBreakBlocks = plugin.getConfig().getBoolean("features.instant-tnt.explosion.breaks-blocks");
+        val explosionRadiusBlocks = plugin.config.getDouble("features.instant-tnt.explosion.spread-radius-blocks")
+        val cubeVolume = (explosionRadiusBlocks * 2).pow(3.0)
 
-        instantTnt.getWorld().createExplosion(cause, BlockUtil.getBlockCenterLocation(instantTnt), power, shouldSetFire, shouldBreakBlocks, false);
+        val totalInstantTnts = instantTntBlocks.size.toDouble()
 
-        removeInstantTnt(instantTnt);
-    }
-
-    private List<Vector> chainDetonateInstantTnt(@NotNull Block startingTnt, List<Vector> blocksToDetonate) {
-        List<Vector> blocksToIterateThrough;
-
-        double explosionRadiusBlocks = plugin.getConfig().getDouble("features.instant-tnt.explosion.spread-radius-blocks");
-        double cubeVolume = Math.pow(explosionRadiusBlocks * 2, 3);
-
-        double totalInstantTnts = instantTntBlocks.size();
-
-        Vector center = BlockUtil.getBlockCenterLocation(startingTnt).toVector();
+        val center = getBlockCenterLocation(startingTnt).toVector()
 
         if (cubeVolume < totalInstantTnts) {
-            blocksToIterateThrough = new ArrayList<>();
+            blocksToIterateThrough = ArrayList()
 
-            for (double x = center.getX() - explosionRadiusBlocks; x <= center.getX() + explosionRadiusBlocks; x++) {
-                for (double y = center.getY() - explosionRadiusBlocks; y <= center.getY() + explosionRadiusBlocks; y++) {
-                    for (double z = center.getZ() - explosionRadiusBlocks; z <= center.getZ() + explosionRadiusBlocks; z++) {
-                        Vector location = new Vector(x, y, z);
+            var x = center.x - explosionRadiusBlocks
+            while (x <= center.x + explosionRadiusBlocks) {
+                var y = center.y - explosionRadiusBlocks
+                while (y <= center.y + explosionRadiusBlocks) {
+                    var z = center.z - explosionRadiusBlocks
+                    while (z <= center.z + explosionRadiusBlocks) {
+                        val location = Vector(x, y, z)
 
-                        double distance = center.distance(location);
+                        val distance = center.distance(location)
 
                         if (distance > explosionRadiusBlocks) {
-                            continue;
+                            z++
+                            continue
                         }
 
-                        blocksToIterateThrough.add(new Vector(x, y, z));
+                        blocksToIterateThrough.add(Vector(x, y, z))
+                        z++
                     }
+                    y++
                 }
+                x++
             }
         } else {
-            blocksToIterateThrough = instantTntBlocks.stream().filter((Vector location) -> BlockUtil.getBlockCenterLocation(location).distance(center) <= explosionRadiusBlocks).toList();
+            blocksToIterateThrough = instantTntBlocks.stream().filter { location: Vector? ->
+                getBlockCenterLocation(
+                    location!!
+                ).distance(center) <= explosionRadiusBlocks
+            }.toList()
         }
 
-        World world = startingTnt.getWorld();
+        val world = startingTnt.world
 
-        for (Vector tntBlockLocation : blocksToIterateThrough) {
+        for (tntBlockLocation in blocksToIterateThrough) {
             if (blocksToDetonate.contains(tntBlockLocation)) {
-                continue;
+                continue
             }
 
-            blocksToDetonate.add(tntBlockLocation);
+            blocksToDetonate.add(tntBlockLocation)
 
             chainDetonateInstantTnt(
-                    world.getBlockAt(
-                            new Location(
-                                    world,
-                                    tntBlockLocation.getX(),
-                                    tntBlockLocation.getY(),
-                                    tntBlockLocation.getZ()
-                            )
-                    ),
-                    blocksToDetonate
-            );
+                world.getBlockAt(
+                    Location(
+                        world,
+                        tntBlockLocation.x,
+                        tntBlockLocation.y,
+                        tntBlockLocation.z
+                    )
+                ),
+                blocksToDetonate
+            )
         }
 
-        return blocksToDetonate;
+        return blocksToDetonate
     }
 
-    public void chainDetonateInstantTnt(Block startingTnt, Entity cause) {
-        List<Vector> blocksToDetonate = chainDetonateInstantTnt(startingTnt, new ArrayList<>());
+    fun chainDetonateInstantTnt(startingTnt: Block, cause: Entity?) {
+        val blocksToDetonate = chainDetonateInstantTnt(startingTnt, ArrayList())
 
-        Vector explosionOrigin = BlockUtil.getBlockCenterLocation(startingTnt).toVector();
-        World world = startingTnt.getWorld();
+        val explosionOrigin = getBlockCenterLocation(startingTnt).toVector()
+        val world = startingTnt.world
 
-        double blocksPerTickDelay = plugin.getConfig().getInt("features.instant-tnt.explosion.blocks-per-tick-delay");
+        val blocksPerTickDelay = plugin.config.getInt("features.instant-tnt.explosion.blocks-per-tick-delay").toDouble()
 
-        for (Vector explosionLocation : blocksToDetonate) {
-            double distance = explosionOrigin.distance(explosionLocation);
+        for (explosionLocation in blocksToDetonate) {
+            val distance = explosionOrigin.distance(explosionLocation)
 
-            int tickDelay = blocksPerTickDelay == 0 ? 0 : (int) Math.floor(distance / blocksPerTickDelay);
+            val tickDelay = if (blocksPerTickDelay == 0.0) 0 else floor(distance / blocksPerTickDelay).toInt()
 
-            Bukkit.getScheduler().runTaskLater(plugin, () -> detonateInstantTnt(
+            Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                detonateInstantTnt(
                     world.getBlockAt(
-                            new Location(world, explosionLocation.getX(), explosionLocation.getY(), explosionLocation.getZ())
+                        Location(world, explosionLocation.x, explosionLocation.y, explosionLocation.z)
                     ),
                     cause
-            ), tickDelay);
+                )
+            }, tickDelay.toLong())
         }
     }
 
-    public void loadInstantTntData() {
+    fun loadInstantTntData() {
         try {
-            Reader reader = new FileReader(instantTntDataFile);
+            val reader: Reader = FileReader(instantTntDataFile)
 
-            Gson gson = new Gson();
+            val gson = Gson()
 
-            List<LinkedTreeMap<String, Double>> linkedTreeMaps = (List<LinkedTreeMap<String, Double>>) gson.fromJson(reader, List.class);
+            val linkedTreeMaps = gson.fromJson<List<*>>(
+                reader,
+                MutableList::class.java
+            ) as List<LinkedTreeMap<String, Double>>
 
-            reader.close();
+            reader.close()
 
-            for (LinkedTreeMap<String, Double> linkedTreeMap : linkedTreeMaps) {
+            for (linkedTreeMap in linkedTreeMaps) {
                 instantTntBlocks.add(
-                        new Vector(
-                                linkedTreeMap.get("x"),
-                                linkedTreeMap.get("y"),
-                                linkedTreeMap.get("z")
-                        )
-                );
+                    Vector(
+                        linkedTreeMap["x"]!!,
+                        linkedTreeMap["y"]!!,
+                        linkedTreeMap["z"]!!
+                    )
+                )
             }
-        } catch (IOException exception) {
-            throw new RuntimeException(exception);
+        } catch (exception: IOException) {
+            throw RuntimeException(exception)
         }
     }
 
-    public void saveInstantTntData() {
+    fun saveInstantTntData() {
         try {
-            Writer writer = new FileWriter(instantTntDataFile);
+            val writer: Writer = FileWriter(instantTntDataFile)
 
-            Gson gson = new Gson();
+            val gson = Gson()
 
-            gson.toJson(instantTntBlocks, writer);
+            gson.toJson(instantTntBlocks, writer)
 
-            writer.flush();
-            writer.close();
-        } catch (IOException exception) {
-            throw new RuntimeException(exception);
+            writer.flush()
+            writer.close()
+        } catch (exception: IOException) {
+            throw RuntimeException(exception)
         }
     }
 }

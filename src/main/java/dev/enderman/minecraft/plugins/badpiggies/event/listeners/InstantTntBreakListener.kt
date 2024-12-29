@@ -1,50 +1,35 @@
-package dev.enderman.minecraft.plugins.badpiggies.event.listeners;
+package dev.enderman.minecraft.plugins.badpiggies.event.listeners
 
-import dev.enderman.minecraft.plugins.badpiggies.BadPiggiesPlugin;
-import dev.enderman.minecraft.plugins.badpiggies.managers.InstantTntManager;
-import dev.enderman.minecraft.plugins.badpiggies.util.BlockUtil;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.entity.Item;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockDropItemEvent;
-import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
+import dev.enderman.minecraft.plugins.badpiggies.BadPiggiesPlugin
+import dev.enderman.minecraft.plugins.badpiggies.util.BlockUtil.getBlockCenterLocation
+import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
+import org.bukkit.event.Listener
+import org.bukkit.event.block.BlockDropItemEvent
 
-import java.util.List;
-
-public class InstantTntBreakListener implements Listener {
-
-    private final BadPiggiesPlugin plugin;
-
-    public InstantTntBreakListener(BadPiggiesPlugin plugin) {
-        this.plugin = plugin;
-    }
-
+class InstantTntBreakListener(private val plugin: BadPiggiesPlugin) : Listener {
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onInstantTntBreak(@NotNull BlockDropItemEvent event) {
-        Block block = event.getBlock();
+    fun onInstantTntBreak(event: BlockDropItemEvent) {
+        val block = event.block
 
-        InstantTntManager instantTntManager = plugin.getInstantTntManager();
+        val instantTntManager = plugin.instantTntManager
 
-        if (!instantTntManager.isInstantTnt(block)) {
-            return;
+        if (!instantTntManager!!.isInstantTnt(block)) {
+            return
         }
 
-        instantTntManager.removeInstantTnt(event.getBlock());
+        instantTntManager.removeInstantTnt(event.block)
 
-        List<Item> items = event.getItems();
+        val items = event.items
 
         if (items.isEmpty()) {
-            return;
+            return
         }
 
-        items.clear();
-        ItemStack instantTnt = instantTntManager.getInstantTntItem();
+        items.clear()
+        val instantTnt = instantTntManager.instantTntItem
 
-        World world = block.getWorld();
-        world.dropItem(BlockUtil.getBlockCenterLocation(block), instantTnt);
+        val world = block.world
+        world.dropItem(getBlockCenterLocation(block), instantTnt)
     }
 }

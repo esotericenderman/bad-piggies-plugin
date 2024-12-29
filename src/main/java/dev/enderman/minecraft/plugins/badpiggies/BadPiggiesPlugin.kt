@@ -1,106 +1,91 @@
-package dev.enderman.minecraft.plugins.badpiggies;
+package dev.enderman.minecraft.plugins.badpiggies
 
-import dev.enderman.minecraft.plugins.badpiggies.event.listeners.InstantTntBreakListener;
-import dev.enderman.minecraft.plugins.badpiggies.event.listeners.InstantTntCollideListener;
-import dev.enderman.minecraft.plugins.badpiggies.event.listeners.InstantTntDetonateListener;
-import dev.enderman.minecraft.plugins.badpiggies.event.listeners.InstantTntPlaceListener;
-import dev.enderman.minecraft.plugins.badpiggies.managers.InstantTntManager;
-import dev.enderman.minecraft.plugins.badpiggies.managers.PlayerTickManager;
-import dev.enderman.minecraft.plugins.badpiggies.managers.PlayerVelocityManager;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.ShapedRecipe;
-import org.bukkit.plugin.PluginManager;
-import org.bukkit.plugin.java.JavaPlugin;
+import dev.enderman.minecraft.plugins.badpiggies.event.listeners.InstantTntBreakListener
+import dev.enderman.minecraft.plugins.badpiggies.event.listeners.InstantTntCollideListener
+import dev.enderman.minecraft.plugins.badpiggies.event.listeners.InstantTntDetonateListener
+import dev.enderman.minecraft.plugins.badpiggies.event.listeners.InstantTntPlaceListener
+import dev.enderman.minecraft.plugins.badpiggies.managers.InstantTntManager
+import dev.enderman.minecraft.plugins.badpiggies.managers.PlayerTickManager
+import dev.enderman.minecraft.plugins.badpiggies.managers.PlayerVelocityManager
+import org.bukkit.Bukkit
+import org.bukkit.Material
+import org.bukkit.NamespacedKey
+import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.inventory.ShapedRecipe
+import org.bukkit.plugin.java.JavaPlugin
+import java.util.*
 
-import java.util.Arrays;
+class BadPiggiesPlugin : JavaPlugin() {
+    var playerTickManager: PlayerTickManager? = null
+        private set
 
-public final class BadPiggiesPlugin extends JavaPlugin {
+    var playerVelocityManager: PlayerVelocityManager? = null
+        private set
 
-    private PlayerTickManager playerTickManager;
+    var instantTntManager: InstantTntManager? = null
+        private set
 
-    private PlayerVelocityManager playerVelocityManager;
+    var instantTntKey: NamespacedKey? = null
+        private set
 
-    private InstantTntManager instantTntManager;
+    override fun onEnable() {
+        dataFolder.mkdir()
 
-    private NamespacedKey instantTntKey;
+        val config = config as YamlConfiguration
 
-    public PlayerTickManager getPlayerTickManager() {
-        return playerTickManager;
-    }
+        config.options().copyDefaults()
+        saveDefaultConfig()
 
-    public PlayerVelocityManager getPlayerVelocityManager() {
-        return playerVelocityManager;
-    }
+        saveResource("data/instant-tnt-blocks.json", false)
 
-    public InstantTntManager getInstantTntManager() {
-        return instantTntManager;
-    }
+        val pluginManager = Bukkit.getPluginManager()
 
-    public NamespacedKey getInstantTntKey() {
-        return instantTntKey;
-    }
+        playerTickManager = PlayerTickManager()
+        pluginManager.registerEvents(playerTickManager!!, this)
+        playerTickManager!!.runTaskTimer(this, 0L, 1L)
 
-    @Override
-    public void onEnable() {
-        getDataFolder().mkdir();
+        playerVelocityManager = PlayerVelocityManager(this)
+        playerVelocityManager!!.runTaskTimer(this, 0L, 1L)
 
-        YamlConfiguration config = (YamlConfiguration) getConfig();
-
-        config.options().copyDefaults();
-        saveDefaultConfig();
-
-        saveResource("data/instant-tnt-blocks.json", false);
-
-        PluginManager pluginManager = Bukkit.getPluginManager();
-
-        playerTickManager =  new PlayerTickManager();
-        pluginManager.registerEvents(playerTickManager, this);
-        playerTickManager.runTaskTimer(this, 0L, 1L);
-
-        playerVelocityManager = new PlayerVelocityManager(this);
-        playerVelocityManager.runTaskTimer(this, 0L, 1L);
-
-        boolean isInstantTntEnabled = config.getBoolean("features.instant-tnt.enabled");
+        val isInstantTntEnabled = config.getBoolean("features.instant-tnt.enabled")
 
         if (isInstantTntEnabled) {
-            instantTntManager = new InstantTntManager(this);
-            instantTntKey = new NamespacedKey(this, "instant-tnt");
+            instantTntManager = InstantTntManager(this)
+            instantTntKey = NamespacedKey(this, "instant-tnt")
 
-            ItemStack instantTnt = instantTntManager.getInstantTntItem();
+            val instantTnt = instantTntManager!!.instantTntItem
 
-            Material[] plankTypes = Arrays.stream(Material.values()).filter((material) -> material.name().endsWith("PLANKS")).toArray(Material[]::new);
+            val plankTypes: Array<Material> = Arrays.stream(Material.entries.toTypedArray())
+                .filter { material -> material.name.endsWith("PLANKS") }
+                .toArray { size -> arrayOfNulls<Material>(size) as Array<Material> }
 
-            for (Material plankType : plankTypes) {
-                NamespacedKey recipeKey = new NamespacedKey(this, "instant-tnt-recipe-" + plankType.name().toLowerCase());
+            for (plankType in plankTypes) {
+                val recipeKey =
+                    NamespacedKey(this, "instant-tnt-recipe-" + plankType.name.lowercase(Locale.getDefault()))
 
-                ShapedRecipe instantTntRecipe = new ShapedRecipe(recipeKey, instantTnt);
+                val instantTntRecipe = ShapedRecipe(recipeKey, instantTnt)
 
-                instantTntRecipe.shape("GPG", "PGP", "GPG");
+                instantTntRecipe.shape("GPG", "PGP", "GPG")
 
-                instantTntRecipe.setIngredient('G', Material.GUNPOWDER);
+                instantTntRecipe.setIngredient('G', Material.GUNPOWDER)
 
-                instantTntRecipe.setIngredient('P', plankType);
+                instantTntRecipe.setIngredient('P', plankType)
 
-                Bukkit.addRecipe(instantTntRecipe);
+                Bukkit.addRecipe(instantTntRecipe)
             }
 
-            pluginManager.registerEvents(new InstantTntPlaceListener(this), this);
-            pluginManager.registerEvents(new InstantTntBreakListener(this), this);
-            pluginManager.registerEvents(new InstantTntCollideListener(this), this);
-            pluginManager.registerEvents(new InstantTntDetonateListener(this), this);
+            pluginManager.registerEvents(InstantTntPlaceListener(this), this)
+            pluginManager.registerEvents(InstantTntBreakListener(this), this)
+            pluginManager.registerEvents(InstantTntCollideListener(this), this)
+            pluginManager.registerEvents(InstantTntDetonateListener(this), this)
         }
     }
 
-    @Override
-    public void onDisable() {
+    override fun onDisable() {
         if (instantTntManager == null) {
-            return;
+            return
         }
 
-        instantTntManager.saveInstantTntData();
+        instantTntManager!!.saveInstantTntData()
     }
 }
